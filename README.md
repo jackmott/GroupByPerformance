@@ -200,3 +200,44 @@ And the results:
 |    GroupbyFirst |      10000 | 11.337 ms | 0.0967 ms | 0.0858 ms | 625.0000 | 343.7500 | 140.6250 | 4859.43 KB |
 | DictionaryFirst |      10000 |  1.539 ms | 0.0056 ms | 0.0046 ms | 101.5625 |  83.9844 |  76.1719 |  920.06 KB |
 
+
+## Have your cake and eat it to?
+
+The brevity that GroupBy affords is really nice.  In many cases you can get that same brevity with better performance by writing your own generic extension methods, to turn Enumerables into grouped dictionaries:
+
+```c#
+        public static Dictionary<K, List<V>> GroupByDictionary<K, V>(this IEnumerable<V> items, Func<V, K> keySelector)
+        {
+            var dictionary = new Dictionary<K, List<V>>();
+            foreach (var item in items)
+            {
+                List<V> grouping;
+                var key = keySelector(item);
+                if (!dictionary.TryGetValue(key, out grouping))
+                {
+                    grouping = new List<V>(1);
+                    dictionary.Add(key, grouping);
+                }
+                grouping.Add(item);
+            }
+            return dictionary;
+        }
+
+        public static Dictionary<K, List<V>> GroupByDictionary<U,K, V>(this IEnumerable<U> items, Func<U, K> keySelector, Func<U,V> valueSelector)
+        {
+            var dictionary = new Dictionary<K, List<V>>();
+            foreach (var item in items)
+            {
+                List<V> grouping;
+                var key = keySelector(item);
+                if (!dictionary.TryGetValue(key, out grouping))
+                {
+                    grouping = new List<V>(1);
+                    dictionary.Add(key, grouping);
+                }
+                grouping.Add(valueSelector(item));
+            }
+            return dictionary;
+        }
+    }
+```
