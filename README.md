@@ -44,4 +44,43 @@ This is a lot more code, and we might expect this to perform worse, since we are
 |       GroupBy_Sums |      10000 | 12.396 ms | 0.1093 ms | 0.1022 ms | 578.1250 | 296.8750 |  78.1250 | 4586.58 KB |
 |    Dictionary_Sums |      10000 |  2.181 ms | 0.0178 ms | 0.0158 ms | 121.0938 | 101.5625 |  85.9375 |  998.24 KB |
 
+Doing the aggregation as you go saves a ton of time and GC pressure. This is because `GroupBy` can't perform this operation in a totally lazy manner, it is having to creating a lookup table behind the scenes, one that is filled with a collection of Bills, rather than just the current sum.
+
+## Building up a cache for later use
+
+Another scenario we often use `GroupBy` for is to create caches/lookup tables for use later in our application.  For instance a website may pull down data from a database on startup, and create an in memory cache to avoid hammering the database for frequently queries but rarely changed data. With this use case, there are two concerns. How long it takes to create the cache, and then how well the cache performs when using it. We will take a look at both. In our case we want some kind of lookup table that lets us get a collection of `Bills` when we provide the `BillType`. We could do that by using GroupBy, ToLookup, or by creating a Dictionary by hand:
+``` c#
+ 
+public Dictionary<int, IEnumerable<Bill>> GroupBy_Cache()
+{
+    return bills.GroupBy(b => b.BillType).ToDictionary(g => g.Key, g => (IEnumerable<Bill>)g);
+}
+ 
+public ILookup<int,Bill> Lookup_Cache()
+{
+    return bills.ToLookup(b => b.BillType);
+}
+
+public Dictionary<int,List<Bill>> Dictionary_Cache()
+{
+    var dict = new Dictionary<int, List<Bill>>();
+    foreach (var bill in bills)
+    {
+        List<Bill> billList;
+        if (!dict.TryGetValue(bill.BillType, out billList))
+        {
+            billList = new List<Bill>();
+            dict.Add(bill.BillType, billList);
+        }
+        billList.Add(bill);
+
+    }
+    return dict;
+}
+```
+
+
+
+
+
 
