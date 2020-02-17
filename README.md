@@ -206,38 +206,38 @@ And the results:
 The brevity that GroupBy affords is really nice.  In many cases you can get that same brevity with better performance by writing your own generic extension methods, to turn Enumerables into grouped dictionaries:
 
 ```c#
-        public static Dictionary<K, List<V>> GroupByDictionary<K, V>(this IEnumerable<V> items, Func<V, K> keySelector)
+    public static Dictionary<K, List<V>> GroupByDictionary<K, V>(this IEnumerable<V> items, Func<V, K> keySelector)
+    {
+        var dictionary = new Dictionary<K, List<V>>();
+        foreach (var item in items)
         {
-            var dictionary = new Dictionary<K, List<V>>();
-            foreach (var item in items)
+            List<V> grouping;
+            var key = keySelector(item);
+            if (!dictionary.TryGetValue(key, out grouping))
             {
-                List<V> grouping;
-                var key = keySelector(item);
-                if (!dictionary.TryGetValue(key, out grouping))
-                {
-                    grouping = new List<V>(1);
-                    dictionary.Add(key, grouping);
-                }
-                grouping.Add(item);
+                grouping = new List<V>(1);
+                dictionary.Add(key, grouping);
             }
-            return dictionary;
+            grouping.Add(item);
         }
-
-        public static Dictionary<K, List<V>> GroupByDictionary<U,K, V>(this IEnumerable<U> items, Func<U, K> keySelector, Func<U,V> valueSelector)
-        {
-            var dictionary = new Dictionary<K, List<V>>();
-            foreach (var item in items)
-            {
-                List<V> grouping;
-                var key = keySelector(item);
-                if (!dictionary.TryGetValue(key, out grouping))
-                {
-                    grouping = new List<V>(1);
-                    dictionary.Add(key, grouping);
-                }
-                grouping.Add(valueSelector(item));
-            }
-            return dictionary;
-        }
+        return dictionary;
     }
+
+    public static Dictionary<K, List<V>> GroupByDictionary<U,K, V>(this IEnumerable<U> items, Func<U, K> keySelector, Func<U,V> valueSelector)
+    {
+        var dictionary = new Dictionary<K, List<V>>();
+        foreach (var item in items)
+        {
+            List<V> grouping;
+            var key = keySelector(item);
+            if (!dictionary.TryGetValue(key, out grouping))
+            {
+                grouping = new List<V>(1);
+                dictionary.Add(key, grouping);
+            }
+            grouping.Add(valueSelector(item));
+        }
+        return dictionary;
+    }
+}
 ```
