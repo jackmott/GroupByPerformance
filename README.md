@@ -1,17 +1,15 @@
 # `GroupBy` Performance
 Looking at the performance of `GroupBy` in various scenarios
 
-We want to see how `GroupBy` performs in various scenarios, let's test!
 This project is all .NET Core 3.1, previous editions may differ due to newer
 .NET Core LINQ optimizations.
 
-We will test two scenarios, each using a toy `Bill` class standing in for a typical thing one might group on.
-Scenario one will have 10,000 keys each with 10 bills, scenario two will have 10 keys each with 10,000 bills.
-
+For each use case I will test two scenarios, each using a toy `Bill` class standing in for a typical thing one might group on.
+Scenario 1 will have ~10,000 keys each with ~10 bills, scenario 2 will have ~10 keys each with ~10,000 bills.
 
 
 ## Aggregating by group
-One thing you might use group by for is to compute some aggregate value by grouping. For instance with our bill, we might want to know the sum of the totals for each by, grouped by bill type. `Group By` provides a very concise way to do this:
+One thing you might use group by for is to compute some aggregate value by grouping. For instance with our bill, we might want to know the sum of the totals for each bill type. `Group By` provides a very concise way to do this:
 
 ```c#
 return bills.GroupBy(b => b.BillType).Select(grouping => grouping.Sum(b => b.Total)).ToList();
@@ -44,7 +42,7 @@ This is a lot more code, and we might expect this to perform worse, since we are
 |       GroupBy_Sums |      10000 | 12.396 ms | 0.1093 ms | 0.1022 ms | 578.1250 | 296.8750 |  78.1250 | 4586.58 KB |
 |    Dictionary_Sums |      10000 |  2.181 ms | 0.0178 ms | 0.0158 ms | 121.0938 | 101.5625 |  85.9375 |  998.24 KB |
 
-Doing the aggregation as you go saves a ton of time and GC pressure. This is because `GroupBy` can't perform this operation in a totally lazy manner, it is having to creating a lookup table behind the scenes, one that is filled with a collection of Bills, rather than just the current sum.
+Doing the aggregation as you go, if possible, saves a ton of time and GC pressure. This is because `GroupBy` can't perform this operation in a totally lazy manner, it is having to creating a lookup table behind the scenes, one that is filled with a collection of Bills, rather than just the current sum.
 
 ## Building up a cache for later use
 
