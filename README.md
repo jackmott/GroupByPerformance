@@ -157,7 +157,7 @@ public Dictionary<int, List<Bill>> GroupByList_Cache()
 }
 ```
 
-Unforunately this takes much longer and way more allocations than building this up by hand:
+Unforunately while this cache will be fast to use, it takes much longer and way more allocations to create:
 
 |            Method | GroupCount |      Mean |     Error |    StdDev |    Gen 0 |    Gen 1 |    Gen 2 | Allocated |
 |------------------ |----------- |----------:|----------:|----------:|---------:|---------:|---------:|----------:|
