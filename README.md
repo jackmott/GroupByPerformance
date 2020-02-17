@@ -48,7 +48,7 @@ Doing the aggregation as you go saves a ton of time and GC pressure. This is bec
 
 ## Building up a cache for later use
 
-Another scenario we often use `GroupBy` for is to create caches/lookup tables for use later in our application.  For instance a website may pull down data from a database on startup, and create an in memory cache to avoid hammering the database for frequently queries but rarely changed data. With this use case, there are two concerns. How long it takes to create the cache, and then how well the cache performs when using it. We will take a look at both. In our case we want some kind of lookup table that lets us get a collection of `Bills` when we provide the `BillType`. We could do that by using GroupBy, ToLookup, or by creating a Dictionary by hand:
+Another scenario we often use `GroupBy` for is to create caches/lookup tables for use later in our application.  For instance a website may pull down data from a database on startup, and create an in memory cache to avoid hammering the database for frequently queries but rarely changed data. With this use case, there are two concerns. How long it takes to create the cache, and then how well the cache performs when using it. We will take a look at both. In our case we want some kind of lookup table that lets us get a collection of `Bills` when we provide the `BillType`. We could do that by using `GroupBy`, `ToLookup`, or by creating a `Dictionary` by hand:
 ``` c#
  
 public Dictionary<int, IEnumerable<Bill>> GroupBy_Cache()
@@ -79,8 +79,59 @@ public Dictionary<int,List<Bill>> Dictionary_Cache()
 }
 ```
 
+Here is how long these approaches take to build:
 
 
+|           Method | GroupCount |      Mean |     Error |    StdDev |    Gen 0 |    Gen 1 |    Gen 2 | Allocated |
+|----------------- |----------- |----------:|----------:|----------:|---------:|---------:|---------:|----------:|
+|    GroupBy_Cache |         10 |  2.582 ms | 0.0093 ms | 0.0087 ms | 343.7500 | 265.6250 | 187.5000 |   2.51 MB |
+|     Lookup_Cache |         10 |  2.507 ms | 0.0107 ms | 0.0089 ms | 343.7500 | 265.6250 | 187.5000 |    2.5 MB |
+| Dictionary_Cache |         10 |  2.173 ms | 0.0092 ms | 0.0086 ms | 312.5000 | 226.5625 | 156.2500 |    2.5 MB |
+|    GroupBy_Cache |      10000 | 12.101 ms | 0.2383 ms | 0.3340 ms | 609.3750 | 328.1250 | 203.1250 |   4.75 MB |
+|     Lookup_Cache |      10000 | 11.864 ms | 0.0617 ms | 0.0577 ms | 515.6250 | 218.7500 |  62.5000 |   3.85 MB |
+| Dictionary_Cache |      10000 |  8.708 ms | 0.1029 ms | 0.0962 ms | 500.0000 | 312.5000 | 140.6250 |   3.58 MB |
 
+It is worth noting that the `Dictionary` case could be optimized further in cases when you know, or approximately know, how many groupings will be in the data ahead of time, by setting the initial `Dictionary` capacity.
 
+## Using the cache
+
+The above startup times may all be roughly equivalent for many use cases, especially since they will usually be one time, or rare operations. But what about using the cache, which will be done repeatedly, and where performance is more likely to be important?  Here is a test of each cache that just grabs a single BillType from each cache, and iterates over all the bills in that group to sum them up:
+
+```c#
+ [Benchmark]
+ public double GroupByCache_Use()
+ {          
+     var bills = groupByCache[5];
+     double total = 0.0;
+     foreach (var bill in bills)
+     {
+         total += bill.Total;
+     }
+     return total;
+ }
+
+ [Benchmark]
+ public double LookupCache_Use()
+ {                        
+     var bills = lookupCache[5];
+     double total = 0.0;
+     foreach (var bill in bills)
+     {
+         total += bill.Total;
+     }                    
+     return total;
+ }
+
+ [Benchmark]
+ public double DictionaryCache_Use()
+ {
+     var bills = dictionaryCache[5];
+     double total = 0.0;
+     for(int j = 0; j < bills.Count;j++)
+     {
+         total += bills[j].Total;
+     }
+     return total;                    
+ }
+    ```
 
