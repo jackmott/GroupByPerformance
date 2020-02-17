@@ -144,7 +144,7 @@ With the following results:
 |     LookupCache_Use |      10000 |     70.00 ns |  1.129 ns |  1.056 ns | 0.0048 |     - |     - |      40 B |
 | DictionaryCache_Use |      10000 |     14.73 ns |  0.068 ns |  0.064 ns |      - |     - |     - |         - |
 
-The differences here are due almost entirely to being able to leverage that the Dictionary cache has a `List` inside of it, allowing us to avoid the overhead and allocations used when using an `IEnumerable`. If you were to use `.Sum()` in all cases for instance, instead of a foreach or fo loop to compute the sums, all 3 caches would perform very nearly the same.  Also it should be noted the time to retrieve a group from the cache is very nearly the same in all 3 cases. Only the time and allocations to iterate over the groups differ.
+The differences here are due almost entirely to being able to leverage that the `Dictionary` cache has a `List` inside of it, allowing us to avoid the overhead and allocations used when using an `IEnumerable`. If you were to use `.Sum()` in all cases for instance, instead of a foreach or for loop to compute the sums, all 3 caches would perform very nearly the same.  Also it should be noted the time to retrieve a group from the cache is very nearly the same in all 3 cases. Only the time and allocations to iterate over the groups differ.
 
 ## Using GroupBy to produce Lists for each group
 
