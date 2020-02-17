@@ -133,5 +133,72 @@ The above startup times may all be roughly equivalent for many use cases, especi
      }
      return total;                    
  }
-    ```
+```
+
+With the following results:
+
+|              Method | GroupCount |         Mean |     Error |    StdDev |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|-------------------- |----------- |-------------:|----------:|----------:|-------:|------:|------:|----------:|
+|    GroupByCache_Use |         10 | 58,547.40 ns | 46.101 ns | 38.496 ns |      - |     - |     - |      40 B |
+|     LookupCache_Use |         10 | 58,321.58 ns | 58.868 ns | 52.185 ns |      - |     - |     - |      41 B |
+| DictionaryCache_Use |         10 | 11,767.20 ns | 32.860 ns | 29.130 ns |      - |     - |     - |         - |
+|    GroupByCache_Use |      10000 |     75.96 ns |  0.375 ns |  0.332 ns | 0.0048 |     - |     - |      40 B |
+|     LookupCache_Use |      10000 |     70.00 ns |  1.129 ns |  1.056 ns | 0.0048 |     - |     - |      40 B |
+| DictionaryCache_Use |      10000 |     14.73 ns |  0.068 ns |  0.064 ns |      - |     - |     - |         - |
+
+The differences here are due almost entirely to being able to leverage that the Dictionary cache has a `List` inside of it, allowing us to avoid the overhead and allocations used when using an `IEnumerable`. If you were to use `.Sum()` in all cases for instance, instead of a foreach or fo loop to compute the sums, all 3 caches would perform very nearly the same.  Also it should be noted the time to retrieve a group from the cache is very nearly the same in all 3 cases. Only the time and allocations to iterate over the groups differ.
+
+## Using GroupBy to produce Lists for each group
+
+If you want to create a cache that is as efficient as possible when being used, you can still use GroupBy, like so:
+
+```c#
+public Dictionary<int, List<Bill>> GroupByList_Cache()
+{
+    return bills.GroupBy(b => b.BillType).ToDictionary(g => g.Key,g => g.ToList());
+}
+```
+
+Unforunately this takes much longer and way more allocations than building this up by hand:
+
+|            Method | GroupCount |      Mean |     Error |    StdDev |    Gen 0 |    Gen 1 |    Gen 2 | Allocated |
+|------------------ |----------- |----------:|----------:|----------:|---------:|---------:|---------:|----------:|
+| GroupByList_Cache |         10 |  3.142 ms | 0.0266 ms | 0.0249 ms | 460.9375 | 359.3750 | 210.9375 |   3.27 MB |
+|  Dictionary_Cache |         10 |  2.088 ms | 0.0091 ms | 0.0081 ms | 328.1250 | 250.0000 | 171.8750 |    2.5 MB |
+| GroupByList_Cache |      10000 | 14.683 ms | 0.2589 ms | 0.2422 ms | 781.2500 | 468.7500 | 187.5000 |   6.04 MB |
+|  Dictionary_Cache |      10000 |  8.577 ms | 0.1040 ms | 0.0973 ms | 468.7500 | 281.2500 | 140.6250 |   3.58 MB |
+
+
+## A real life example from work (and a large open source project)
+
+At work we had some code running in a web framework on every single request that was a bit slow, GroupBy was being used to extract just the first element out of each group into a `Dictionary`. Here is an approximation of the original code and the optimized version:
+
+```c#
+ [Benchmark]
+ public Dictionary<int, Bill> GroupbyFirst()
+ {
+     return bills.GroupBy(b => b.BillType).ToDictionary(g => g.Key, g => g.First());
+ }
+ [Benchmark]
+ public Dictionary<int, Bill> DictionaryFirst()
+ {
+     var dict = new Dictionary<int, Bill>();
+     foreach (var bill in bills)
+     {
+         if (!dict.ContainsKey(bill.BillType))
+         {
+             dict.Add(bill.BillType, bill);
+         }
+     }
+     return dict;
+ }
+```
+
+And the results:
+|          Method | GroupCount |      Mean |     Error |    StdDev |    Gen 0 |    Gen 1 |    Gen 2 |  Allocated |
+|---------------- |----------- |----------:|----------:|----------:|---------:|---------:|---------:|-----------:|
+|    GroupbyFirst |         10 |  2.481 ms | 0.0068 ms | 0.0064 ms | 367.1875 | 285.1563 | 210.9375 | 2565.98 KB |
+| DictionaryFirst |         10 |  1.140 ms | 0.0023 ms | 0.0019 ms |        - |        - |        - |    1.01 KB |
+|    GroupbyFirst |      10000 | 11.337 ms | 0.0967 ms | 0.0858 ms | 625.0000 | 343.7500 | 140.6250 | 4859.43 KB |
+| DictionaryFirst |      10000 |  1.539 ms | 0.0056 ms | 0.0046 ms | 101.5625 |  83.9844 |  76.1719 |  920.06 KB |
 
