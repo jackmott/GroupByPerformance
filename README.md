@@ -42,7 +42,7 @@ This is a lot more code, and we might expect this to perform worse, since we are
 |       GroupBy_Sums |      10000 | 12.396 ms | 0.1093 ms | 0.1022 ms | 578.1250 | 296.8750 |  78.1250 | 4586.58 KB |
 |    Dictionary_Sums |      10000 |  2.181 ms | 0.0178 ms | 0.0158 ms | 121.0938 | 101.5625 |  85.9375 |  998.24 KB |
 
-Doing the aggregation as you go, if possible, saves a ton of time and GC pressure. This is because `GroupBy` can't perform this operation in a totally lazy manner, it is having to creating a lookup table behind the scenes, one that is filled with a collection of Bills, rather than just the current sum.
+Doing the aggregation as you go, if possible, saves a ton of time and GC pressure. This is because `GroupBy` can't perform this operation in a totally lazy manner, it is having to create a lookup table behind the scenes, one that is filled with a collection of Bills, rather than just the current sum.
 
 ## Building up a cache for later use
 
